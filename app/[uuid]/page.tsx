@@ -5,19 +5,15 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import {
-  Download,
-  Copy,
-  Moon,
-  Sun,
-  ArrowLeft,
-  Save,
-  Trash2,
-} from "lucide-react";
+import { Download, Copy, ArrowLeft, Save, Trash2, Pencil } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import { useTheme } from "next-themes";
 import Link from "next/link";
-import { fetchSchemaDetail, updateSchema, deleteSchema } from "@/lib/api";
+import {
+  fetchSchemaDetail,
+  updateSchema,
+  deleteSchema,
+  renameSchema,
+} from "@/lib/api";
 import type { SchemaDetail } from "@/lib/types";
 import {
   AlertDialog,
@@ -30,13 +26,22 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { SchemaProperties } from "./SchemaProperties";
 
 export default function SchemaDetailPage() {
   const { uuid } = useParams();
   if (typeof uuid !== "string") throw new Error("Invalid UUID");
 
-  const { theme, setTheme } = useTheme();
   const router = useRouter();
 
   const [schemaDetail, setSchemaDetail] = useState<SchemaDetail | null>(null);
@@ -44,6 +49,8 @@ export default function SchemaDetailPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [newSchemaName, setNewSchemaName] = useState("");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -52,6 +59,7 @@ export default function SchemaDetailPage() {
       const data = await fetchSchemaDetail(uuid);
       setSchemaDetail(data);
       setSchema(data.json);
+      setNewSchemaName(data.name);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch schema");
       toast({
@@ -244,9 +252,26 @@ export default function SchemaDetailPage() {
     }
   }, [uuid, router]);
 
-  const toggleTheme = useCallback(() => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  }, [theme, setTheme]);
+  const handleRenameSchema = useCallback(async () => {
+    try {
+      await renameSchema(uuid, newSchemaName);
+      toast({
+        title: "Success",
+        description: "Schema renamed successfully",
+      });
+      setSchemaDetail((prev) =>
+        prev ? { ...prev, name: newSchemaName } : prev
+      );
+      setRenameDialogOpen(false);
+    } catch (err) {
+      toast({
+        title: "Error",
+        description:
+          err instanceof Error ? err.message : "Failed to rename schema",
+        variant: "destructive",
+      });
+    }
+  }, [uuid, newSchemaName]);
 
   const sortedProperties = useMemo(() => {
     if (!schema?.properties) return [] as [string, any][];
@@ -299,8 +324,7 @@ export default function SchemaDetailPage() {
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" size="sm">
-                  <ArrowLeft className="h-4 w-4 mr-1" />
-                  Back
+                  <ArrowLeft className="h-4 w-4" />
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
@@ -322,21 +346,41 @@ export default function SchemaDetailPage() {
           ) : (
             <Button variant="ghost" size="sm" asChild>
               <Link href="/" prefetch={false}>
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Back
+                <ArrowLeft className="h-4 w-4" />
               </Link>
             </Button>
           )}
           <h1 className="text-xl font-bold">{schemaDetail.name}</h1>
         </div>
         <div className="flex gap-1">
-          <Button variant="ghost" size="sm" onClick={toggleTheme}>
-            {theme === "dark" ? (
-              <Sun className="h-4 w-4" />
-            ) : (
-              <Moon className="h-4 w-4" />
-            )}
-          </Button>
+          <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Rename Schema</DialogTitle>
+                <DialogDescription>
+                  Enter a new name for this schema.
+                </DialogDescription>
+              </DialogHeader>
+              <Input
+                placeholder="New Schema Name"
+                value={newSchemaName}
+                onChange={(e) => setNewSchemaName(e.target.value)}
+              />
+              <DialogFooter>
+                <Button
+                  onClick={handleRenameSchema}
+                  disabled={!newSchemaName.trim()}
+                >
+                  Save
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <Button variant="ghost" size="sm" onClick={copyToClipboard}>
             <Copy className="h-4 w-4" />
           </Button>

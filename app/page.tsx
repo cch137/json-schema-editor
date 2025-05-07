@@ -103,7 +103,6 @@ export default function SchemaListPage() {
         variant: "destructive",
       });
     } finally {
-      setIsCreating(false);
       setNewSchemaName("");
     }
   }, [newSchemaName, router]);
@@ -201,7 +200,7 @@ export default function SchemaListPage() {
             <CardTitle>My Schemas</CardTitle>
             <Dialog>
               <DialogTrigger asChild>
-                <Button size="sm">
+                <Button size="sm" onClick={() => setIsCreating(false)}>
                   <Plus className="h-4 w-4 mr-1" /> Create New
                 </Button>
               </DialogTrigger>
@@ -229,7 +228,7 @@ export default function SchemaListPage() {
             </Dialog>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-2">
           {loading && !schemas.length ? (
             <div className="flex justify-center items-center py-8">
               <LoadingSpinner className="h-8 w-8" />
