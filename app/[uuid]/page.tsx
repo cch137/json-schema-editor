@@ -4,26 +4,15 @@ import { useState, useEffect, useCallback, useMemo, use, Usable } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import {
-  PlusCircle,
-  Trash2,
   Download,
   Copy,
   Moon,
   Sun,
   ArrowLeft,
   Save,
+  Trash2,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { useTheme } from "next-themes";
@@ -41,20 +30,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { SchemaProperties } from "./SchemaProperties"; // Import the new component
 
-export default function SchemaDetailPage({
-  params,
-}: {
+interface SchemaDetailPageProps {
   params: Usable<{ uuid: string }>;
-}) {
+}
+
+export default function SchemaDetailPage({ params }: SchemaDetailPageProps) {
   const { uuid } = use<{ uuid: string }>(params);
   const { theme, setTheme } = useTheme();
   const router = useRouter();
 
   const [schemaDetail, setSchemaDetail] = useState<SchemaDetail | null>(null);
   const [schema, setSchema] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -132,7 +122,7 @@ export default function SchemaDetailPage({
     if (oldKey === newKey || !newKey.trim()) return;
 
     setSchema((prevSchema: any) => {
-      const newProperties: any = {};
+      const newProperties: Record<string, any> = {};
       Object.entries(prevSchema.properties).forEach(([key, value]) => {
         if (key === oldKey) {
           newProperties[newKey] = value;
@@ -240,8 +230,8 @@ export default function SchemaDetailPage({
   }, [theme, setTheme]);
 
   const sortedProperties = useMemo(() => {
-    if (!schema?.properties) return [];
-    return Object.entries(schema.properties);
+    if (!schema?.properties) return [] as [string, any][];
+    return Object.entries(schema.properties) as [string, any][];
   }, [schema?.properties]);
 
   if (loading) {
@@ -339,179 +329,16 @@ export default function SchemaDetailPage({
 
       <Card className="mb-3">
         <CardContent className="p-3">
-          <div className="space-y-3">
-            {sortedProperties.map(([key, prop]: [string, any]) => (
-              <div
-                key={key}
-                className="p-2 border border-neutral-200 dark:border-neutral-800 rounded-md relative"
-              >
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-1 right-1 h-6 w-6"
-                  onClick={() => removeProperty(key)}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-
-                <div className="grid grid-cols-2 gap-2 pr-6">
-                  <div className="space-y-1">
-                    <Label htmlFor={`${key}-name`} className="text-xs">
-                      Property Name
-                    </Label>
-                    <Input
-                      id={`${key}-name`}
-                      value={key}
-                      onChange={(e) => {
-                        renameProperty(key, e.target.value);
-                        setTimeout(() => e.currentTarget.focus(), 1);
-                      }}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label htmlFor={`${key}-title`} className="text-xs">
-                      Display Title
-                    </Label>
-                    <Input
-                      id={`${key}-title`}
-                      value={prop.title || ""}
-                      onChange={(e) =>
-                        updateProperty(key, "title", e.target.value)
-                      }
-                      className="h-8 text-sm"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label htmlFor={`${key}-type`} className="text-xs">
-                      Type
-                    </Label>
-                    <Select
-                      value={prop.type}
-                      onValueChange={(value) =>
-                        updateProperty(key, "type", value)
-                      }
-                    >
-                      <SelectTrigger id={`${key}-type`} className="h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="string">String</SelectItem>
-                        <SelectItem value="number">Number</SelectItem>
-                        <SelectItem value="integer">Integer</SelectItem>
-                        <SelectItem value="boolean">Boolean</SelectItem>
-                        <SelectItem value="object">Object</SelectItem>
-                        <SelectItem value="array">Array</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex items-center space-x-2 h-8">
-                    <Checkbox
-                      id={`${key}-required`}
-                      checked={schema.required?.includes(key) || false}
-                      onCheckedChange={() => toggleRequired(key)}
-                    />
-                    <Label htmlFor={`${key}-required`} className="text-xs">
-                      Required
-                    </Label>
-                  </div>
-
-                  {prop.type === "string" && (
-                    <div className="space-y-1 col-span-2">
-                      <Label htmlFor={`${key}-enum`} className="text-xs">
-                        Enum Values (comma separated)
-                      </Label>
-                      <Input
-                        id={`${key}-enum`}
-                        value={prop.enum ? prop.enum.join(", ") : ""}
-                        onChange={(e) => {
-                          const enumValues = e.target.value
-                            ? e.target.value.split(",").map((v) => v.trim())
-                            : undefined;
-                          updateProperty(key, "enum", enumValues);
-                        }}
-                        className="h-8 text-sm"
-                      />
-                    </div>
-                  )}
-
-                  {(prop.type === "string" ||
-                    prop.type === "number" ||
-                    prop.type === "integer") && (
-                    <>
-                      <div className="space-y-1">
-                        <Label
-                          htmlFor={`${key}-description`}
-                          className="text-xs"
-                        >
-                          Description
-                        </Label>
-                        <Input
-                          id={`${key}-description`}
-                          value={prop.description || ""}
-                          onChange={(e) =>
-                            updateProperty(key, "description", e.target.value)
-                          }
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor={`${key}-default`} className="text-xs">
-                          Default Value
-                        </Label>
-                        <Input
-                          id={`${key}-default`}
-                          value={prop.default || ""}
-                          onChange={(e) =>
-                            updateProperty(key, "default", e.target.value)
-                          }
-                          className="h-8 text-sm"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {prop.type === "boolean" && (
-                    <div className="space-y-1">
-                      <Label htmlFor={`${key}-default`} className="text-xs">
-                        Default Value
-                      </Label>
-                      <Select
-                        value={prop.default?.toString() || "false"}
-                        onValueChange={(value) =>
-                          updateProperty(key, "default", value === "true")
-                        }
-                      >
-                        <SelectTrigger
-                          id={`${key}-default`}
-                          className="h-8 text-sm"
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="true">True</SelectItem>
-                          <SelectItem value="false">False</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            <Button
-              onClick={addProperty}
-              size="sm"
-              variant="outline"
-              className="w-full"
-            >
-              <PlusCircle className="mr-2 h-3 w-3" />
-              Add Property
-            </Button>
-          </div>
+          {/* Use the new SchemaProperties component here */}
+          <SchemaProperties
+            sortedProperties={sortedProperties}
+            schema={schema}
+            onRemoveProperty={removeProperty}
+            onUpdateProperty={updateProperty}
+            onRenameProperty={renameProperty}
+            onToggleRequired={toggleRequired}
+            onAddProperty={addProperty}
+          />
         </CardContent>
       </Card>
 
