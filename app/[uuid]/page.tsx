@@ -30,14 +30,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { SchemaProperties } from "./SchemaProperties"; // Import the new component
+import { SchemaProperties } from "./SchemaProperties";
 
 interface SchemaDetailPageProps {
   params: Usable<{ uuid: string }>;
 }
 
 export default function SchemaDetailPage({ params }: SchemaDetailPageProps) {
-  const { uuid } = use<{ uuid: string }>(params);
+  const { uuid } = use(params);
   const { theme, setTheme } = useTheme();
   const router = useRouter();
 
@@ -71,6 +71,27 @@ export default function SchemaDetailPage({ params }: SchemaDetailPageProps) {
     fetchData();
   }, [fetchData]);
 
+  // Determine if there are unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    if (!schemaDetail || !schema) return false;
+    return JSON.stringify(schema) !== JSON.stringify(schemaDetail.json);
+  }, [schema, schemaDetail]);
+
+  // Handle onbeforeunload for unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        event.preventDefault();
+        event.returnValue = ""; // Modern browsers require this to show the prompt
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
+
   const addProperty = useCallback(() => {
     setSchema((prevSchema: any) => ({
       ...prevSchema,
@@ -89,7 +110,6 @@ export default function SchemaDetailPage({ params }: SchemaDetailPageProps) {
       const newProperties = { ...prevSchema.properties };
       delete newProperties[key];
 
-      // Also remove from required if it's there
       const newRequired = prevSchema.required
         ? prevSchema.required.filter((item: string) => item !== key)
         : [];
@@ -131,7 +151,6 @@ export default function SchemaDetailPage({ params }: SchemaDetailPageProps) {
         }
       });
 
-      // Update required array if the property is required
       const newRequired = prevSchema.required
         ? prevSchema.required.map((key: string) =>
             key === oldKey ? newKey : key
@@ -195,6 +214,8 @@ export default function SchemaDetailPage({ params }: SchemaDetailPageProps) {
         title: "Success",
         description: "Schema saved successfully",
       });
+      // Update schemaDetail to reflect saved state
+      setSchemaDetail((prev) => (prev ? { ...prev, json: schema } : prev));
     } catch (err) {
       toast({
         title: "Error",
@@ -316,7 +337,11 @@ export default function SchemaDetailPage({ params }: SchemaDetailPageProps) {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          <Button size="sm" onClick={saveSchema} disabled={saving}>
+          <Button
+            size="sm"
+            onClick={saveSchema}
+            disabled={saving || !hasUnsavedChanges}
+          >
             {saving ? (
               <LoadingSpinner className="h-4 w-4 mr-1" />
             ) : (
@@ -329,7 +354,6 @@ export default function SchemaDetailPage({ params }: SchemaDetailPageProps) {
 
       <Card className="mb-3">
         <CardContent className="p-3">
-          {/* Use the new SchemaProperties component here */}
           <SchemaProperties
             sortedProperties={sortedProperties}
             schema={schema}

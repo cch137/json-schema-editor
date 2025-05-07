@@ -41,7 +41,7 @@ interface PropertyItemProps {
   onUpdateProperty: (key: string, field: string, value: any) => void;
   onRenameProperty: (oldKey: string, newKey: string) => void;
   onToggleRequired: (key: string) => void;
-  index: number; // Added for stable key
+  index: number;
 }
 
 const PropertyItem = ({
@@ -57,24 +57,20 @@ const PropertyItem = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const [tempKey, setTempKey] = useState(propKey);
 
-  // Sync tempKey with propKey if it changes externally
   useEffect(() => {
     setTempKey(propKey);
   }, [propKey]);
 
-  // Handle input change locally
   const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTempKey(e.target.value);
   };
 
-  // Trigger rename on blur
   const handleKeyBlur = () => {
     if (tempKey !== propKey && tempKey.trim() !== "") {
       onRenameProperty(propKey, tempKey);
     }
   };
 
-  // Trigger rename on Enter and retain focus
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && tempKey !== propKey && tempKey.trim() !== "") {
       onRenameProperty(propKey, tempKey);
