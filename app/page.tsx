@@ -81,9 +81,7 @@ export default function SchemaListPage() {
     try {
       const initialSchema = {
         type: "object",
-        properties: {
-          title: { type: "string", title: "Title" },
-        },
+        properties: {},
       };
 
       const newSchema = await createSchema({
