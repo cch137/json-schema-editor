@@ -199,8 +199,8 @@ export async function renameSchema(uuid: string, name: string) {
       body: JSON.stringify({ name }),
     });
 
-    const data = await response.json();
-    const parsedResponse = ApiResponseSchema.safeParse(data);
+    const responseData = await response.json();
+    const parsedResponse = ApiResponseSchema.safeParse(responseData);
 
     if (!parsedResponse.success) {
       console.error("API response validation error:", parsedResponse.error);
@@ -213,7 +213,14 @@ export async function renameSchema(uuid: string, name: string) {
       throw new Error(apiResponse.error);
     }
 
-    return true;
+    const parsedData = SchemaDetailSchema.safeParse(apiResponse.value);
+
+    if (!parsedData.success) {
+      console.error("Schema validation error:", parsedData.error);
+      throw new Error("Invalid data format received from server");
+    }
+
+    return parsedData.data;
   } catch (error) {
     console.error("Error renaming schema:", error);
     throw error;

@@ -254,14 +254,12 @@ export default function SchemaDetailPage() {
 
   const handleRenameSchema = useCallback(async () => {
     try {
-      await renameSchema(uuid, newSchemaName);
+      const { json, name } = await renameSchema(uuid, newSchemaName);
       toast({
         title: "Success",
         description: "Schema renamed successfully",
       });
-      setSchemaDetail((prev) =>
-        prev ? { ...prev, name: newSchemaName } : prev
-      );
+      setSchemaDetail((prev) => (prev ? { ...prev, name, json } : prev));
       setRenameDialogOpen(false);
     } catch (err) {
       toast({
