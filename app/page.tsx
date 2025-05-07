@@ -293,8 +293,8 @@ export default function SchemaListPage() {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete Schema</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Are you sure you want to delete "{schema.name}"?
-                            This action cannot be undone.
+                            Are you sure you want to delete {`"${schema.name}"`}
+                            ? This action cannot be undone.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
