@@ -62,12 +62,11 @@ const PropertyItem = ({
   }, [propKey]);
 
   const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTempKey(e.target.value);
-  };
-
-  const handleKeyBlur = () => {
-    if (tempKey !== propKey && tempKey.trim() !== "") {
-      onRenameProperty(propKey, tempKey);
+    const newKey = e.target.value;
+    setTempKey(newKey);
+    // Update schema immediately by simulating a rename
+    if (newKey !== propKey && newKey.trim() !== "") {
+      onRenameProperty(propKey, newKey);
     }
   };
 
@@ -75,6 +74,14 @@ const PropertyItem = ({
     if (e.key === "Enter" && tempKey !== propKey && tempKey.trim() !== "") {
       onRenameProperty(propKey, tempKey);
       inputRef.current?.focus();
+    }
+  };
+
+  const handleBlur = () => {
+    if (tempKey !== propKey && tempKey.trim() !== "") {
+      onRenameProperty(propKey, tempKey);
+    } else if (tempKey.trim() === "") {
+      setTempKey(propKey); // Revert to original key if empty
     }
   };
 
@@ -98,8 +105,8 @@ const PropertyItem = ({
             id={`${propKey}-name`}
             value={tempKey}
             onChange={handleKeyChange}
-            onBlur={handleKeyBlur}
             onKeyDown={handleKeyDown}
+            onBlur={handleBlur}
             className="h-8 text-sm"
             ref={inputRef}
           />
@@ -255,7 +262,7 @@ export const SchemaProperties = ({
     <div className="space-y-3">
       {sortedProperties.map(([key, prop], index) => (
         <PropertyItem
-          key={index}
+          key={index} // Use index as key to maintain component stability
           index={index}
           propKey={key}
           prop={prop}
