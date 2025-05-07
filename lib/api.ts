@@ -196,7 +196,7 @@ export async function renameSchema(uuid: string, name: string) {
     const response = await fetch(`${API_BASE_URL}/${uuid}`, {
       method: "POST",
       ...apiInit,
-      body: JSON.stringify({ name, json: { title: name } }),
+      body: JSON.stringify({ name }),
     });
 
     const data = await response.json();
