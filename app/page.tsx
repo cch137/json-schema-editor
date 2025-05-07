@@ -1,7 +1,5 @@
 "use client";
 
-import { AlertDialogFooter } from "@/components/ui/alert-dialog";
-
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +32,7 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
+  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
@@ -176,7 +175,7 @@ export default function SchemaListPage() {
   return (
     <div className="p-3 max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-3">
-        <h1 className="text-xl font-bold">JSON Schema Manager</h1>
+        <h1 className="text-xl font-bold">Schema Manager</h1>
         <div className="flex gap-1">
           <Button variant="ghost" size="sm" onClick={toggleTheme}>
             {theme === "dark" ? (
@@ -199,7 +198,7 @@ export default function SchemaListPage() {
       <Card className="mb-3">
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center">
-            <CardTitle>Schemas</CardTitle>
+            <CardTitle>My Schemas</CardTitle>
             <Dialog>
               <DialogTrigger asChild>
                 <Button size="sm">
@@ -246,13 +245,22 @@ export default function SchemaListPage() {
               {sortedSchemas.map((schema) => (
                 <div
                   key={schema.uuid}
-                  className="p-3 border border-neutral-200 dark:border-neutral-800 rounded-md flex justify-between items-center"
+                  className="p-3 border border-neutral-200 dark:border-neutral-800 rounded-md flex justify-between items-center hover:bg-neutral-50/50 dark:hover:bg-neutral-800/50 hover:shadow-md transition-all duration-200 ease-in-out cursor-pointer"
+                  onClick={(e) => {
+                    if (
+                      e.target instanceof HTMLElement &&
+                      !e.target.closest("button") &&
+                      !e.target.closest("a")
+                    ) {
+                      router.push(`/${schema.uuid}`);
+                    }
+                  }}
                 >
                   <div className="flex-1">
                     <Link
                       href={`/${schema.uuid}`}
                       prefetch={false}
-                      className="font-medium hover:underline"
+                      className="block font-medium text-base hover:underline py-2 px-4 -mx-4 -my-2"
                     >
                       {schema.name}
                     </Link>
@@ -264,13 +272,20 @@ export default function SchemaListPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => openRenameDialog(schema)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openRenameDialog(schema);
+                      }}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </AlertDialogTrigger>
