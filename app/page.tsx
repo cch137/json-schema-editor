@@ -78,13 +78,15 @@ export default function SchemaListPage() {
   const handleCreateSchema = useCallback(async () => {
     setIsCreating(true);
     try {
+      const name = newSchemaName || "New Schema";
       const initialSchema = {
+        title: name,
         type: "object",
         properties: {},
       };
 
       const newSchema = await createSchema({
-        name: newSchemaName || "New Schema",
+        name,
         json: initialSchema,
         metadata: {},
       });
