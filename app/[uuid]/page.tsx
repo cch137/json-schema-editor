@@ -255,6 +255,10 @@ export default function SchemaDetailPage({ params }: SchemaDetailPageProps) {
     return Object.entries(schema.properties) as [string, any][];
   }, [schema?.properties]);
 
+  const handleBackNavigation = useCallback(() => {
+    router.push("/");
+  }, [router]);
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -293,12 +297,38 @@ export default function SchemaDetailPage({ params }: SchemaDetailPageProps) {
     <div className="p-3 max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-3">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/" prefetch={false}>
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back
-            </Link>
-          </Button>
+          {hasUnsavedChanges ? (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-1" />
+                  Back
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    You have unsaved changes. Are you sure you want to leave
+                    without saving? Your changes will be lost.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogAction>Cancel</AlertDialogAction>
+                  <AlertDialogCancel onClick={handleBackNavigation}>
+                    Discard Changes
+                  </AlertDialogCancel>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          ) : (
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/" prefetch={false}>
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Back
+              </Link>
+            </Button>
+          )}
           <h1 className="text-xl font-bold">{schemaDetail.name}</h1>
         </div>
         <div className="flex gap-1">
