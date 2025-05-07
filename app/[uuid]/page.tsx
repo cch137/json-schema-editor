@@ -314,10 +314,10 @@ export default function SchemaDetailPage({ params }: SchemaDetailPageProps) {
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogAction>Cancel</AlertDialogAction>
                   <AlertDialogCancel onClick={handleBackNavigation}>
                     Discard Changes
                   </AlertDialogCancel>
+                  <AlertDialogAction>Cancel</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
