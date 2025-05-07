@@ -4,7 +4,7 @@ import {
   ApiResponseSchema,
 } from "./types";
 
-const API_BASE_URL = "https://jet-dev.cch137.link/agents/schemas";
+const API_BASE_URL = "https://jet.cch137.link/agents/schemas";
 
 const apiInit = {
   referrerPolicy: "origin",
