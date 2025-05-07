@@ -36,6 +36,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { SchemaProperties } from "./SchemaProperties";
 
 export default function SchemaDetailPage() {
@@ -143,6 +144,13 @@ export default function SchemaDetailPage() {
     },
     []
   );
+
+  const updateSchemaDescription = useCallback((description: string) => {
+    setSchema((prevSchema: any) => ({
+      ...prevSchema,
+      description: description || undefined,
+    }));
+  }, []);
 
   const renameProperty = useCallback((oldKey: string, newKey: string) => {
     if (oldKey === newKey || !newKey.trim()) return;
@@ -425,6 +433,17 @@ export default function SchemaDetailPage() {
 
       <Card className="mb-3">
         <CardContent className="p-3">
+          <div className="space-y-1 mb-3">
+            <Label htmlFor="schema-description" className="text-xs">
+              Schema Description
+            </Label>
+            <Input
+              id="schema-description"
+              value={schema.description || ""}
+              onChange={(e) => updateSchemaDescription(e.target.value)}
+              className="h-8 text-sm"
+            />
+          </div>
           <SchemaProperties
             sortedProperties={sortedProperties}
             schema={schema}
