@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, use, Usable } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -32,12 +32,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { SchemaProperties } from "./SchemaProperties";
 
-interface SchemaDetailPageProps {
-  params: Usable<{ uuid: string }>;
-}
+export default function SchemaDetailPage() {
+  const { uuid } = useParams();
+  if (typeof uuid !== "string") throw new Error("Invalid UUID");
 
-export default function SchemaDetailPage({ params }: SchemaDetailPageProps) {
-  const { uuid } = use(params);
   const { theme, setTheme } = useTheme();
   const router = useRouter();
 
