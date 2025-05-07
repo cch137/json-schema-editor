@@ -260,6 +260,7 @@ export default function SchemaDetailPage() {
         description: "Schema renamed successfully",
       });
       setSchemaDetail((prev) => (prev ? { ...prev, name, json } : prev));
+      setSchema(json);
       setRenameDialogOpen(false);
     } catch (err) {
       toast({
