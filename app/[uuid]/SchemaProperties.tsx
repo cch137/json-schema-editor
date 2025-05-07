@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2, PlusCircle } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 
 type PropertyType =
   | "string"
@@ -41,6 +41,7 @@ interface PropertyItemProps {
   onUpdateProperty: (key: string, field: string, value: any) => void;
   onRenameProperty: (oldKey: string, newKey: string) => void;
   onToggleRequired: (key: string) => void;
+  index: number; // Added for stable key
 }
 
 const PropertyItem = ({
@@ -51,8 +52,36 @@ const PropertyItem = ({
   onUpdateProperty,
   onRenameProperty,
   onToggleRequired,
+  index,
 }: PropertyItemProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [tempKey, setTempKey] = useState(propKey);
+
+  // Sync tempKey with propKey if it changes externally
+  useEffect(() => {
+    setTempKey(propKey);
+  }, [propKey]);
+
+  // Handle input change locally
+  const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTempKey(e.target.value);
+  };
+
+  // Trigger rename on blur
+  const handleKeyBlur = () => {
+    if (tempKey !== propKey && tempKey.trim() !== "") {
+      onRenameProperty(propKey, tempKey);
+    }
+  };
+
+  // Trigger rename on Enter and retain focus
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && tempKey !== propKey && tempKey.trim() !== "") {
+      onRenameProperty(propKey, tempKey);
+      inputRef.current?.focus();
+    }
+  };
+
   return (
     <div className="p-2 border border-neutral-200 dark:border-neutral-800 rounded-md relative">
       <Button
@@ -71,8 +100,10 @@ const PropertyItem = ({
           </Label>
           <Input
             id={`${propKey}-name`}
-            value={propKey}
-            onChange={(e) => onRenameProperty(propKey, e.target.value)}
+            value={tempKey}
+            onChange={handleKeyChange}
+            onBlur={handleKeyBlur}
+            onKeyDown={handleKeyDown}
             className="h-8 text-sm"
             ref={inputRef}
           />
@@ -226,9 +257,10 @@ export const SchemaProperties = ({
 }: SchemaPropertiesProps) => {
   return (
     <div className="space-y-3">
-      {sortedProperties.map(([key, prop]) => (
+      {sortedProperties.map(([key, prop], index) => (
         <PropertyItem
-          key={key}
+          key={index}
+          index={index}
           propKey={key}
           prop={prop}
           schema={schema}
