@@ -1,7 +1,8 @@
 "use client";
 
-import type React from "react";
-import { useState, useEffect, useCallback, useRef } from "react";
+import React from "react";
+
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -46,7 +47,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -124,6 +124,7 @@ const TYPE_ALLOWED_PROPERTIES: Record<PropertyType, string[]> = {
 // String formats for string type
 const STRING_FORMATS = [
   { value: "none", label: "None" },
+  { value: "uuid", label: "UUID" },
   { value: "email", label: "Email" },
   { value: "uri", label: "URI" },
   { value: "date-time", label: "Date-Time" },
@@ -131,7 +132,6 @@ const STRING_FORMATS = [
   { value: "time", label: "Time" },
   { value: "ipv4", label: "IPv4" },
   { value: "ipv6", label: "IPv6" },
-  { value: "uuid", label: "UUID" },
 ];
 
 // Utility function to generate a unique ID for a property path
@@ -271,18 +271,15 @@ const PropertyEditor: React.FC<PropertyEditorProps> = ({
   // Check if this node has nested properties that can be expanded
   const hasNestedContent = node.type === "object" || node.type === "array";
 
-  // Initialize object properties if they don't exist
-  const initializeObjectProperties = () => {
-    if (node.type === "object" && !node.properties) {
-      onUpdate({ properties: {} });
-    }
-  };
-
   // Add a new property to an object
   const handleAddProperty = () => {
     if (node.type === "object") {
       const properties = node.properties || {};
-      const newPropName = `property${Object.keys(properties).length + 1}`;
+      let i = 0;
+      let newPropName = `property${++i}`;
+      while (newPropName in properties) {
+        newPropName = `property${++i}`;
+      }
       onUpdate({
         properties: {
           ...properties,
@@ -384,7 +381,7 @@ const PropertyEditor: React.FC<PropertyEditorProps> = ({
             />
             <Label
               htmlFor={`${propertyId}-required`}
-              className="text-[10px] cursor-pointer"
+              className="text-xs opacity-75 cursor-pointer"
             >
               Required
             </Label>
@@ -417,6 +414,7 @@ const PropertyEditor: React.FC<PropertyEditorProps> = ({
             // 对于 object 类型，确保有 properties
             if (newType === "object" && !currentNode.properties) {
               updates.properties = {};
+              updates.additionalProperties = false;
             }
 
             // 对于 array 类型，删除 items 以便用户重新选择
@@ -599,7 +597,7 @@ const PropertyEditor: React.FC<PropertyEditorProps> = ({
                     <div className="text-xs font-medium mb-1 flex items-center">
                       <span className="mr-1">Items Definition</span>
                       <span className="text-pink-500 text-xs font-mono">
-                        ...
+                        [...]
                       </span>
                     </div>
                     <PropertyEditor
@@ -635,7 +633,7 @@ function renderTypeSpecificFields(
   ) => (
     <div className="mb-1">
       <div className="flex items-center">
-        <Label htmlFor={id} className="text-[10px] w-24 flex-shrink-0">
+        <Label htmlFor={id} className="text-xs opacity-75 w-24 flex-shrink-0">
           {label}
         </Label>
         {component}
@@ -1002,35 +1000,38 @@ function renderTypeSpecificFields(
   }
 }
 
-// 更新 SchemaEditor 组件，使其更加紧凑
-function SchemaEditor({
-  schema,
-  onUpdate,
-}: {
-  schema: any;
-  onUpdate: (schema: any) => void;
-}) {
-  // 确保 schema 是一个对象
+// Update the SchemaEditor component to add additionalProperties checkbox for root schema
+// Find the SchemaEditor component and add the following code after the schema description input:
+const SchemaEditor = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<"div"> & {
+    schema: any;
+    onUpdate: (schema: any) => void;
+  }
+>(({ schema, onUpdate, ...props }, ref) => {
+  // Ensure schema is an object
   const safeSchema = schema || {};
 
   // Add a new root property
   const handleAddProperty = useCallback(() => {
-    const newSchema = { ...safeSchema };
+    const newSchema = JSON.parse(JSON.stringify(safeSchema)); // Deep copy to ensure state update
     if (!newSchema.properties) {
       newSchema.properties = {};
     }
 
-    const newPropName = `property${
-      Object.keys(newSchema.properties).length + 1
-    }`;
+    let i = 0;
+    let newPropName = `property${++i}`;
+    while (newPropName in newSchema.properties) {
+      newPropName = `property${++i}`;
+    }
     newSchema.properties[newPropName] = { type: "string" };
-    onUpdate(newSchema);
+    onUpdate(newSchema); // Pass the new object to ensure state update
   }, [safeSchema, onUpdate]);
 
   // Remove a root property
   const handleRemoveProperty = useCallback(
     (key: string) => {
-      const newSchema = { ...safeSchema };
+      const newSchema = JSON.parse(JSON.stringify(safeSchema)); // Deep copy
       if (newSchema.properties && key in newSchema.properties) {
         delete newSchema.properties[key];
 
@@ -1052,7 +1053,7 @@ function SchemaEditor({
   // Update a root property
   const handleUpdateProperty = useCallback(
     (key: string, updates: Partial<SchemaNode>) => {
-      const newSchema = { ...safeSchema };
+      const newSchema = JSON.parse(JSON.stringify(safeSchema)); // Deep copy
       if (newSchema.properties && key in newSchema.properties) {
         newSchema.properties[key] = {
           ...newSchema.properties[key],
@@ -1067,7 +1068,7 @@ function SchemaEditor({
   // Rename a root property
   const handleRenameProperty = useCallback(
     (oldKey: string, newKey: string) => {
-      const newSchema = { ...safeSchema };
+      const newSchema = JSON.parse(JSON.stringify(safeSchema)); // Deep copy
       if (newSchema.properties && oldKey in newSchema.properties) {
         const newProperties: Record<string, any> = {};
         Object.entries(newSchema.properties).forEach(([key, value]) => {
@@ -1094,7 +1095,7 @@ function SchemaEditor({
   // Toggle required status for a property
   const handleToggleRequired = useCallback(
     (key: string) => {
-      const newSchema = JSON.parse(JSON.stringify(safeSchema)); // 深拷贝以确保状态更新
+      const newSchema = JSON.parse(JSON.stringify(safeSchema)); // Deep copy to ensure state update
       if (!newSchema.required) {
         newSchema.required = [];
       }
@@ -1110,7 +1111,7 @@ function SchemaEditor({
         newSchema.required = [...newSchema.required, key];
       }
 
-      // 确保状态更新
+      // Ensure state update
       onUpdate({ ...newSchema });
     },
     [safeSchema, onUpdate]
@@ -1127,9 +1128,9 @@ function SchemaEditor({
   );
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" {...props} ref={ref}>
       <div className="space-y-1 mb-2">
-        <Label htmlFor="schema-description" className="text-xs">
+        <Label htmlFor="schema-description" className="text-xs opacity-75">
           Schema Description
         </Label>
         <Input
@@ -1139,6 +1140,26 @@ function SchemaEditor({
           className="h-7 text-xs"
           placeholder="Describe your schema"
         />
+      </div>
+
+      {/* Add additionalProperties checkbox for root schema */}
+      <div className="flex items-center space-x-2 mb-2">
+        <Checkbox
+          id="schema-additional-properties"
+          checked={safeSchema.additionalProperties !== false}
+          onCheckedChange={(checked) =>
+            onUpdate({
+              ...safeSchema,
+              additionalProperties: checked === true ? undefined : false,
+            })
+          }
+        />
+        <Label
+          htmlFor="schema-additional-properties"
+          className="text-xs opacity-75"
+        >
+          Allow Additional Properties
+        </Label>
       </div>
 
       <div className="bg-neutral-50 dark:bg-neutral-900 p-3 rounded-md border border-neutral-200 dark:border-neutral-800">
@@ -1179,25 +1200,28 @@ function SchemaEditor({
       </div>
     </div>
   );
-}
+});
+SchemaEditor.displayName = "SchemaEditor";
 
-// 更新 SchemaDetailPage 组件中的视图切换部分
-// 在 SchemaDetailPage 组件中找到 ToggleGroup 部分并替换为以下代码
-
+// Now update the SchemaDetailPage component to move the view toggle inside the Card
+// and fix the rename/delete functionality
 export default function SchemaDetailPage() {
   const [viewMode, setViewMode] = useState<"visual" | "json">("visual");
   const [schema, setSchema] = useState<any>({});
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [schemaDetail, setSchemaDetail] = useState<SchemaDetail | null>(null);
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  // For the rename functionality
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [newSchemaName, setNewSchemaName] = useState("");
+  const [isRenaming, setIsRenaming] = useState(false);
+
+  // For the delete functionality
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
   const params = useParams();
   const schemaId = params.uuid as string;
-  const [initialSchemaDetail, setInitialSchemaDetail] =
-    useState<SchemaDetail | null>(null);
+  const [lastSavedSchema, setLastSavedSchema] = useState<any>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -1205,8 +1229,8 @@ export default function SchemaDetailPage() {
         try {
           const detail = await fetchSchemaDetail(schemaId);
           setSchemaDetail(detail);
-          setSchema(detail.json); // 修改这里，从 detail.json 获取数据
-          setInitialSchemaDetail(detail);
+          setSchema(detail.json);
+          setLastSavedSchema(JSON.parse(JSON.stringify(detail.json)));
           setNewSchemaName(detail.name);
         } catch (error) {
           console.error("Error fetching schema detail:", error);
@@ -1222,13 +1246,82 @@ export default function SchemaDetailPage() {
     fetchData();
   }, [schemaId]);
 
+  // Check for unsaved changes using JSON.stringify comparison
+  const hasUnsavedChanges = useMemo(() => {
+    if (!lastSavedSchema || !schema) return false;
+    return JSON.stringify(schema) !== JSON.stringify(lastSavedSchema);
+  }, [schema, lastSavedSchema]);
+
+  // Warn user before leaving with unsaved changes
   useEffect(() => {
-    if (initialSchemaDetail?.json) {
-      setHasUnsavedChanges(
-        JSON.stringify(schema) !== JSON.stringify(initialSchemaDetail.json)
-      );
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
+
+  // Rename schema handler
+  const handleRenameSchema = async () => {
+    if (!schemaId || !newSchemaName.trim()) return;
+
+    setIsRenaming(true);
+    try {
+      await renameSchema(schemaId, newSchemaName.trim());
+      toast({
+        title: "Success",
+        description: "Schema renamed successfully",
+      });
+      setRenameDialogOpen(false);
+
+      // Update the schema title to match the new name
+      const updatedSchema = { ...schema, title: newSchemaName.trim() };
+      setSchema(updatedSchema);
+
+      // Fetch the updated schema detail
+      const detail = await fetchSchemaDetail(schemaId);
+      setSchemaDetail(detail);
+    } catch (err) {
+      toast({
+        title: "Error",
+        description:
+          err instanceof Error ? err.message : "Failed to rename schema",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRenaming(false);
     }
-  }, [schema, initialSchemaDetail]);
+  };
+
+  // Delete schema handler
+  const handleDeleteSchema = async () => {
+    if (!schemaId) return;
+
+    setIsDeleting(true);
+    try {
+      await apiDeleteSchema(schemaId);
+      toast({
+        title: "Success",
+        description: "Schema deleted successfully",
+      });
+      router.push("/");
+    } catch (err) {
+      toast({
+        title: "Error",
+        description:
+          err instanceof Error ? err.message : "Failed to delete schema",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const saveSchema = async () => {
     if (!schemaId || !schemaDetail) return;
@@ -1246,7 +1339,7 @@ export default function SchemaDetailPage() {
       const detail = await fetchSchemaDetail(schemaId);
       setSchemaDetail(detail);
       setSchema(detail.json);
-      setInitialSchemaDetail(detail);
+      setLastSavedSchema(JSON.parse(JSON.stringify(detail.json)));
     } catch (error) {
       console.error("Error saving schema:", error);
       toast({
@@ -1256,51 +1349,6 @@ export default function SchemaDetailPage() {
       });
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleDeleteSchema = async () => {
-    if (!schemaId) return;
-
-    setDeleting(true);
-    try {
-      await apiDeleteSchema(schemaId);
-      toast({
-        title: "Success",
-        description: "Schema deleted successfully.",
-      });
-      router.push("/");
-    } catch (error) {
-      console.error("Error deleting schema:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete schema.",
-        variant: "destructive",
-      });
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  const handleRenameSchema = async () => {
-    if (!schemaId || !newSchemaName.trim()) return;
-
-    try {
-      await renameSchema(schemaId, newSchemaName.trim());
-      toast({
-        title: "Success",
-        description: "Schema renamed successfully.",
-      });
-      setRenameDialogOpen(false);
-      const detail = await fetchSchemaDetail(schemaId);
-      setSchemaDetail(detail);
-    } catch (error) {
-      console.error("Error renaming schema:", error);
-      toast({
-        title: "Error",
-        description: "Failed to rename schema.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -1340,16 +1388,15 @@ export default function SchemaDetailPage() {
 
   if (!schemaDetail) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-full py-8">
         <LoadingSpinner />
       </div>
     );
   }
 
   return (
-    <div className="container py-4 mx-auto space-y-3">
-      {/* 更新页面顶部的按钮和标题样式 */}
-      {/* 在 SchemaDetailPage 组件中找到顶部导航部分并替换为以下代码 */}
+    <div className="container px-3 py-4 max-w-4xl mx-auto space-y-3">
+      {/* Update the top navigation bar */}
       <div className="flex justify-between items-center bg-white dark:bg-neutral-950 p-2 rounded-md border border-neutral-200 dark:border-neutral-800 shadow-sm">
         <div className="flex items-center gap-2">
           {hasUnsavedChanges ? (
@@ -1359,22 +1406,17 @@ export default function SchemaDetailPage() {
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="max-w-sm">
+              <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-                  <AlertDialogDescription className="text-xs">
+                  <AlertDialogDescription>
                     You have unsaved changes. Are you sure you want to leave
                     without saving?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel className="h-7 text-xs">
-                    Cancel
-                  </AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleBackNavigation}
-                    className="h-7 text-xs"
-                  >
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleBackNavigation}>
                     Discard Changes
                   </AlertDialogAction>
                 </AlertDialogFooter>
@@ -1397,31 +1439,39 @@ export default function SchemaDetailPage() {
           )}
         </div>
         <div className="flex gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={() => {
+              setNewSchemaName(schemaDetail?.name || "");
+              setRenameDialogOpen(true);
+            }}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+
           <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-xs">
+            <DialogContent>
               <DialogHeader>
-                <DialogTitle className="text-base">Rename Schema</DialogTitle>
-                <DialogDescription className="text-xs">
+                <DialogTitle>Rename Schema</DialogTitle>
+                <DialogDescription>
                   Enter a new name for this schema.
                 </DialogDescription>
               </DialogHeader>
               <Input
-                placeholder="New Schema Name"
+                placeholder="Schema Name"
                 value={newSchemaName}
                 onChange={(e) => setNewSchemaName(e.target.value)}
-                className="h-7 text-xs"
               />
               <DialogFooter>
                 <Button
                   onClick={handleRenameSchema}
-                  disabled={!newSchemaName.trim()}
-                  className="h-7 text-xs"
+                  disabled={isRenaming || !newSchemaName.trim()}
                 >
+                  {isRenaming ? (
+                    <LoadingSpinner className="h-4 w-4 mr-2" />
+                  ) : null}
                   Save
                 </Button>
               </DialogFooter>
@@ -1443,28 +1493,36 @@ export default function SchemaDetailPage() {
           >
             <Download className="h-3.5 w-3.5" />
           </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="max-w-sm">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+
+          <AlertDialog
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+          >
+            <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Schema</AlertDialogTitle>
-                <AlertDialogDescription className="text-xs">
+                <AlertDialogDescription>
                   Are you sure you want to delete this schema? This action
                   cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="h-7 text-xs">
-                  Cancel
-                </AlertDialogCancel>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleDeleteSchema}
-                  className="h-7 text-xs"
+                  disabled={isDeleting}
                 >
+                  {isDeleting ? (
+                    <LoadingSpinner className="h-4 w-4 mr-2" />
+                  ) : null}
                   Delete
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -1486,57 +1544,49 @@ export default function SchemaDetailPage() {
         </div>
       </div>
 
-      {/* 更新 SchemaDetailPage 组件中的视图切换部分 */}
-      {/* 在 SchemaDetailPage 组件中找到 ToggleGroup 部分并替换为以下代码 */}
-      <div className="flex items-center justify-end">
-        <ToggleGroup
-          type="single"
-          value={viewMode}
-          onValueChange={(value) =>
-            value && setViewMode(value as "visual" | "json")
-          }
-          className="bg-neutral-100 dark:bg-neutral-800 p-0.5 rounded-md"
-        >
-          <ToggleGroupItem
-            value="visual"
-            aria-label="Visual Editor"
-            className="h-6 px-2 text-xs data-[state=on]:bg-white dark:data-[state=on]:bg-neutral-900"
-          >
-            <Eye className="h-3 w-3 mr-1" />
-            Visual
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            value="json"
-            aria-label="JSON View"
-            className="h-6 px-2 text-xs data-[state=on]:bg-white dark:data-[state=on]:bg-neutral-900"
-          >
-            <Code className="h-3 w-3 mr-1" />
-            JSON
-          </ToggleGroupItem>
-        </ToggleGroup>
-      </div>
+      {/* Move the view toggle inside the Card */}
+      <Card className="mb-3 border-neutral-200 dark:border-neutral-800 shadow-sm">
+        <CardContent className="p-3">
+          <div className="flex justify-between items-center mb-3">
+            <div className="text-sm font-bold">Schema Editor</div>
+            <ToggleGroup
+              type="single"
+              value={viewMode}
+              onValueChange={(value) =>
+                value && setViewMode(value as "visual" | "json")
+              }
+              className="bg-neutral-100 dark:bg-neutral-800 p-0.5 rounded-md"
+            >
+              <ToggleGroupItem
+                value="visual"
+                aria-label="Visual Editor"
+                className="h-6 px-2 text-xs data-[state=on]:bg-white dark:data-[state=on]:bg-neutral-900"
+              >
+                <Eye className="h-3 w-3 mr-1" />
+                Visual
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="json"
+                aria-label="JSON View"
+                className="h-6 px-2 text-xs data-[state=on]:bg-white dark:data-[state=on]:bg-neutral-900"
+              >
+                <Code className="h-3 w-3 mr-1" />
+                JSON
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
 
-      {/* 更新 Card 组件样式 */}
-      {/* 在 SchemaDetailPage 组件中找到 Card 组件并替换为以下代码 */}
-      {viewMode === "visual" && (
-        <Card className="mb-3 border-neutral-200 dark:border-neutral-800 shadow-sm">
-          <CardContent className="p-3">
+          {viewMode === "visual" ? (
             <SchemaEditor schema={schema} onUpdate={setSchema} />
-          </CardContent>
-        </Card>
-      )}
-
-      {viewMode === "json" && (
-        <Card className="border-neutral-200 dark:border-neutral-800 shadow-sm">
-          <CardContent className="p-3">
+          ) : (
             <div className="bg-neutral-50 dark:bg-neutral-900 rounded-md p-2 overflow-hidden">
               <pre className="text-xs overflow-auto max-h-[70vh] p-2 font-mono">
                 {JSON.stringify(schema, null, 2)}
               </pre>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

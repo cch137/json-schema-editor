@@ -83,6 +83,7 @@ export default function SchemaListPage() {
         title: name,
         type: "object",
         properties: {},
+        additionalProperties: false,
       };
 
       const newSchema = await createSchema({
