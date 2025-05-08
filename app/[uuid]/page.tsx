@@ -1322,6 +1322,8 @@ export default function SchemaDetailPage() {
   const [schema, setSchema] = useState<any>({});
   const [schemaDetail, setSchemaDetail] = useState<SchemaDetail | null>(null);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   // For the rename functionality
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [newSchemaName, setNewSchemaName] = useState("");
@@ -1339,19 +1341,31 @@ export default function SchemaDetailPage() {
   const [isEditingJson, setIsEditingJson] = useState(false);
 
   useEffect(() => {
+    const hookUnmounted = Symbol();
+    const controller = new AbortController();
+
     const fetchData = async () => {
       if (schemaId) {
         try {
-          const detail = await fetchSchemaDetail(schemaId);
+          setLoading(true);
+          const detail = await fetchSchemaDetail(schemaId, controller.signal);
+          setLoading(false);
+          setError(null);
           setSchemaDetail(detail);
           setSchema(detail.json);
           setLastSavedSchema(JSON.parse(JSON.stringify(detail.json)));
           setNewSchemaName(detail.name);
-        } catch (error) {
-          console.error("Error fetching schema detail:", error);
+          setLoading(false);
+        } catch (err) {
+          if (err === hookUnmounted) return;
+          setLoading(false);
+          setError(
+            err instanceof Error ? err.message : "Failed to fetch schema"
+          );
           toast({
             title: "Error",
-            description: "Failed to load schema details.",
+            description:
+              err instanceof Error ? err.message : "Failed to fetch schema",
             variant: "destructive",
           });
         }
@@ -1359,6 +1373,8 @@ export default function SchemaDetailPage() {
     };
 
     fetchData();
+
+    return () => controller.abort(hookUnmounted);
   }, [schemaId]);
 
   // Check for unsaved changes using JSON.stringify comparison
@@ -1541,10 +1557,36 @@ export default function SchemaDetailPage() {
     [isEditingJson]
   );
 
-  if (!schemaDetail) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center h-full py-8">
-        <LoadingSpinner />
+      <div className="flex justify-center items-center h-screen">
+        <LoadingSpinner className="h-8 w-8" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-3 max-w-4xl mx-auto">
+        <div className="text-center py-8 text-red-500">
+          <p>{error}</p>
+          <Button variant="outline" className="mt-4" asChild>
+            <Link href="/">Back to List</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!schemaDetail || !schema) {
+    return (
+      <div className="p-3 max-w-4xl mx-auto">
+        <div className="text-center py-8 text-muted-foreground">
+          <p>Schema not found</p>
+          <Button variant="outline" className="mt-4" asChild>
+            <Link href="/">Back to List</Link>
+          </Button>
+        </div>
       </div>
     );
   }

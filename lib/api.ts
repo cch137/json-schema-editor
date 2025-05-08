@@ -25,7 +25,6 @@ export async function fetchSchemaList() {
     const parsedResponse = ApiResponseSchema.safeParse(data);
 
     if (!parsedResponse.success) {
-      console.error("API response validation error:", parsedResponse.error);
       throw new Error("Invalid API response format");
     }
 
@@ -38,29 +37,27 @@ export async function fetchSchemaList() {
     const parsedData = SchemaListSchema.safeParse(apiResponse.value);
 
     if (!parsedData.success) {
-      console.error("Schema validation error:", parsedData.error);
       throw new Error("Invalid data format received from server");
     }
 
     return parsedData.data;
   } catch (error) {
-    console.error("Error fetching schema list:", error);
     throw error;
   }
 }
 
-export async function fetchSchemaDetail(uuid: string) {
+export async function fetchSchemaDetail(uuid: string, signal?: AbortSignal) {
   try {
     const response = await fetch(`${API_BASE_URL}/${uuid}`, {
       method: "GET",
       ...apiInit,
+      signal,
     });
 
     const data = await response.json();
     const parsedResponse = ApiResponseSchema.safeParse(data);
 
-    if (!parsedResponse.success) {
-      console.error("API response validation error:", parsedResponse.error);
+    if (!parsedResponse.success || !response.ok) {
       throw new Error("Invalid API response format");
     }
 
@@ -73,13 +70,11 @@ export async function fetchSchemaDetail(uuid: string) {
     const parsedData = SchemaDetailSchema.safeParse(apiResponse.value);
 
     if (!parsedData.success) {
-      console.error("Schema validation error:", parsedData.error);
       throw new Error("Invalid data format received from server");
     }
 
     return parsedData.data;
   } catch (error) {
-    console.error("Error fetching schema detail:", error);
     throw error;
   }
 }
@@ -89,78 +84,63 @@ export async function createSchema(data: {
   json: any;
   metadata?: Record<string, any>;
 }) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/`, {
-      method: "POST",
-      ...apiInit,
-      body: JSON.stringify(data),
-    });
+  const response = await fetch(`${API_BASE_URL}/`, {
+    method: "POST",
+    ...apiInit,
+    body: JSON.stringify(data),
+  });
 
-    const responseData = await response.json();
-    const parsedResponse = ApiResponseSchema.safeParse(responseData);
+  const responseData = await response.json();
+  const parsedResponse = ApiResponseSchema.safeParse(responseData);
 
-    if (!parsedResponse.success) {
-      console.error("API response validation error:", parsedResponse.error);
-      throw new Error("Invalid API response format");
-    }
-
-    const apiResponse = parsedResponse.data;
-
-    if (!apiResponse.success) {
-      throw new Error(apiResponse.error);
-    }
-
-    const parsedData = SchemaDetailSchema.safeParse(apiResponse.value);
-
-    if (!parsedData.success) {
-      console.error("Schema validation error:", parsedData.error);
-      throw new Error("Invalid data format received from server");
-    }
-
-    return parsedData.data;
-  } catch (error) {
-    console.error("Error creating schema:", error);
-    throw error;
+  if (!parsedResponse.success) {
+    throw new Error("Invalid API response format");
   }
+
+  const apiResponse = parsedResponse.data;
+
+  if (!apiResponse.success) {
+    throw new Error(apiResponse.error);
+  }
+
+  const parsedData = SchemaDetailSchema.safeParse(apiResponse.value);
+
+  if (!parsedData.success) {
+    throw new Error("Invalid data format received from server");
+  }
+  return parsedData.data;
 }
 
 export async function updateSchema(
   uuid: string,
   data: { json: any; metadata?: Record<string, any> }
 ) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/${uuid}`, {
-      method: "POST",
-      ...apiInit,
-      body: JSON.stringify({ uuid, ...data }),
-    });
+  const response = await fetch(`${API_BASE_URL}/${uuid}`, {
+    method: "POST",
+    ...apiInit,
+    body: JSON.stringify({ uuid, ...data }),
+  });
 
-    const responseData = await response.json();
-    const parsedResponse = ApiResponseSchema.safeParse(responseData);
+  const responseData = await response.json();
+  const parsedResponse = ApiResponseSchema.safeParse(responseData);
 
-    if (!parsedResponse.success) {
-      console.error("API response validation error:", parsedResponse.error);
-      throw new Error("Invalid API response format");
-    }
-
-    const apiResponse = parsedResponse.data;
-
-    if (!apiResponse.success) {
-      throw new Error(apiResponse.error);
-    }
-
-    const parsedData = SchemaDetailSchema.safeParse(apiResponse.value);
-
-    if (!parsedData.success) {
-      console.error("Schema validation error:", parsedData.error);
-      throw new Error("Invalid data format received from server");
-    }
-
-    return parsedData.data;
-  } catch (error) {
-    console.error("Error updating schema:", error);
-    throw error;
+  if (!parsedResponse.success) {
+    throw new Error("Invalid API response format");
   }
+
+  const apiResponse = parsedResponse.data;
+
+  if (!apiResponse.success) {
+    throw new Error(apiResponse.error);
+  }
+
+  const parsedData = SchemaDetailSchema.safeParse(apiResponse.value);
+
+  if (!parsedData.success) {
+    throw new Error("Invalid data format received from server");
+  }
+
+  return parsedData.data;
 }
 
 export async function deleteSchema(uuid: string) {
@@ -186,7 +166,6 @@ export async function deleteSchema(uuid: string) {
 
     return true;
   } catch (error) {
-    console.error("Error deleting schema:", error);
     throw error;
   }
 }
@@ -203,7 +182,6 @@ export async function renameSchema(uuid: string, name: string) {
     const parsedResponse = ApiResponseSchema.safeParse(responseData);
 
     if (!parsedResponse.success) {
-      console.error("API response validation error:", parsedResponse.error);
       throw new Error("Invalid API response format");
     }
 
@@ -216,13 +194,11 @@ export async function renameSchema(uuid: string, name: string) {
     const parsedData = SchemaDetailSchema.safeParse(apiResponse.value);
 
     if (!parsedData.success) {
-      console.error("Schema validation error:", parsedData.error);
       throw new Error("Invalid data format received from server");
     }
 
     return parsedData.data;
   } catch (error) {
-    console.error("Error renaming schema:", error);
     throw error;
   }
 }
