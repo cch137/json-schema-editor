@@ -1456,8 +1456,6 @@ export default function SchemaDetailPage() {
           err instanceof Error ? err.message : "Failed to delete schema",
         variant: "destructive",
       });
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -1654,13 +1652,16 @@ export default function SchemaDetailPage() {
             variant="ghost"
             size="sm"
             className="h-7 w-7 p-0"
-            onClick={() => setDeleteDialogOpen(true)}
+            onClick={() => {
+              setIsDeleting(false);
+              setDeleteDialogOpen(true);
+            }}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
 
           <AlertDialog
-            open={deleteDialogOpen}
+            open={deleteDialogOpen || isDeleting}
             onOpenChange={setDeleteDialogOpen}
           >
             <AlertDialogContent>
