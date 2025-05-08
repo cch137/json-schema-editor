@@ -1273,20 +1273,43 @@ export default function SchemaDetailPage() {
 
     setIsRenaming(true);
     try {
-      await renameSchema(schemaId, newSchemaName.trim());
-      toast({
-        title: "Success",
-        description: "Schema renamed successfully",
-      });
+      // Create a copy of the current schema to update the title
+      const updatedSchema = JSON.parse(JSON.stringify(schema));
+      updatedSchema.title = newSchemaName.trim();
+
+      // If the schema is not in an unsaved state, we can update it directly on the client
+      if (!hasUnsavedChanges) {
+        await renameSchema(schemaId, newSchemaName.trim());
+        toast({
+          title: "Success",
+          description: "Schema renamed successfully",
+        });
+
+        // Update the schema detail and schema with the new name/title
+        setSchemaDetail((prev) =>
+          prev ? { ...prev, name: newSchemaName.trim() } : prev
+        );
+        setSchema(updatedSchema);
+        // Also update lastSavedSchema to prevent marking as unsaved
+        setLastSavedSchema(JSON.parse(JSON.stringify(updatedSchema)));
+      } else {
+        // If there are already unsaved changes, just update the schema title locally
+        // The rename will be applied on the server when the user saves all changes
+        await renameSchema(schemaId, newSchemaName.trim());
+        toast({
+          title: "Success",
+          description:
+            "Schema renamed successfully. Other changes still need to be saved.",
+        });
+
+        // Update the schema detail name but keep the unsaved changes
+        setSchemaDetail((prev) =>
+          prev ? { ...prev, name: newSchemaName.trim() } : prev
+        );
+        setSchema(updatedSchema);
+      }
+
       setRenameDialogOpen(false);
-
-      // Update the schema title to match the new name
-      const updatedSchema = { ...schema, title: newSchemaName.trim() };
-      setSchema(updatedSchema);
-
-      // Fetch the updated schema detail
-      const detail = await fetchSchemaDetail(schemaId);
-      setSchemaDetail(detail);
     } catch (err) {
       toast({
         title: "Error",
