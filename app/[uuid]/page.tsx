@@ -19,6 +19,8 @@ import {
   Eye,
   ChevronDown,
   ChevronRight,
+  Check,
+  X,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import Link from "next/link";
@@ -60,6 +62,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea";
 
 type PropertyType =
   | "string"
@@ -574,6 +577,7 @@ const PropertyEditor: React.FC<PropertyEditorProps> = ({
                         [
                           "string",
                           "number",
+                          "integer",
                           "boolean",
                           "object",
                           "array",
@@ -1203,6 +1207,114 @@ const SchemaEditor = React.forwardRef<
 });
 SchemaEditor.displayName = "SchemaEditor";
 
+// JSON Editor component for editing JSON directly
+const JsonEditor = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<"div"> & {
+    schema: any;
+    onUpdate: (schema: any) => void;
+    isEditing: boolean;
+    onToggleEdit: () => void;
+  }
+>(({ schema, onUpdate, isEditing, onToggleEdit, ...props }, ref) => {
+  const [jsonText, setJsonText] = useState("");
+  const [jsonError, setJsonError] = useState<string | null>(null);
+
+  // Update jsonText when schema changes or edit mode is toggled
+  useEffect(() => {
+    if (isEditing) {
+      setJsonText(JSON.stringify(schema, null, 2));
+      setJsonError(null);
+    }
+  }, [schema, isEditing]);
+
+  // Handle JSON text changes
+  const handleJsonChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setJsonText(e.target.value);
+    setJsonError(null);
+  };
+
+  // Save JSON changes
+  const handleSaveJson = () => {
+    try {
+      const parsedJson = JSON.parse(jsonText);
+      onUpdate(parsedJson);
+      setJsonError(null);
+      onToggleEdit(); // Exit edit mode after successful save
+    } catch (error) {
+      setJsonError(
+        error instanceof Error
+          ? `Invalid JSON: ${error.message}`
+          : "Invalid JSON"
+      );
+    }
+  };
+
+  // Cancel JSON editing
+  const handleCancelEdit = () => {
+    setJsonText(JSON.stringify(schema, null, 2));
+    setJsonError(null);
+    onToggleEdit();
+  };
+
+  return (
+    <div className="space-y-2" {...props} ref={ref}>
+      <div className="flex justify-between items-center">
+        <div className="text-sm font-medium">JSON Schema</div>
+        {isEditing ? (
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              onClick={handleCancelEdit}
+            >
+              <X className="h-3 w-3 mr-1" />
+              Cancel
+            </Button>
+            <Button size="sm" className="h-7 text-xs" onClick={handleSaveJson}>
+              <Check className="h-3 w-3 mr-1" />
+              Save
+            </Button>
+          </div>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs"
+            onClick={onToggleEdit}
+          >
+            <Pencil className="h-3 w-3 mr-1" />
+            Edit JSON
+          </Button>
+        )}
+      </div>
+
+      {jsonError && (
+        <div className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 p-2 rounded-md border border-red-200 dark:border-red-800">
+          {jsonError}
+        </div>
+      )}
+
+      {isEditing ? (
+        <Textarea
+          value={jsonText}
+          onChange={handleJsonChange}
+          className="font-mono text-xs h-[70vh] resize-none"
+          spellCheck={false}
+        />
+      ) : (
+        <div className="bg-neutral-50 dark:bg-neutral-900 rounded-md p-2 overflow-hidden">
+          <pre className="text-xs overflow-auto max-h-[70vh] p-2 font-mono">
+            {JSON.stringify(schema, null, 2)}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+});
+JsonEditor.displayName = "JsonEditor";
+
 // Now update the SchemaDetailPage component to move the view toggle inside the Card
 // and fix the rename/delete functionality
 export default function SchemaDetailPage() {
@@ -1222,6 +1334,9 @@ export default function SchemaDetailPage() {
   const params = useParams();
   const schemaId = params.uuid as string;
   const [lastSavedSchema, setLastSavedSchema] = useState<any>(null);
+
+  // For JSON editing
+  const [isEditingJson, setIsEditingJson] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -1409,6 +1524,25 @@ export default function SchemaDetailPage() {
     router.push("/");
   };
 
+  // Toggle JSON edit mode
+  const toggleJsonEditMode = useCallback(() => {
+    setIsEditingJson((prev) => !prev);
+  }, []);
+
+  // Handle view mode change
+  const handleViewModeChange = useCallback(
+    (value: string) => {
+      if (value) {
+        setViewMode(value as "visual" | "json");
+        // Exit JSON edit mode when switching to visual mode
+        if (value === "visual" && isEditingJson) {
+          setIsEditingJson(false);
+        }
+      }
+    },
+    [isEditingJson]
+  );
+
   if (!schemaDetail) {
     return (
       <div className="flex items-center justify-center h-full py-8">
@@ -1575,9 +1709,7 @@ export default function SchemaDetailPage() {
             <ToggleGroup
               type="single"
               value={viewMode}
-              onValueChange={(value) =>
-                value && setViewMode(value as "visual" | "json")
-              }
+              onValueChange={handleViewModeChange}
               className="bg-neutral-100 dark:bg-neutral-800 p-0.5 rounded-md"
             >
               <ToggleGroupItem
@@ -1602,11 +1734,12 @@ export default function SchemaDetailPage() {
           {viewMode === "visual" ? (
             <SchemaEditor schema={schema} onUpdate={setSchema} />
           ) : (
-            <div className="bg-neutral-50 dark:bg-neutral-900 rounded-md p-2 overflow-hidden">
-              <pre className="text-xs overflow-auto max-h-[70vh] p-2 font-mono">
-                {JSON.stringify(schema, null, 2)}
-              </pre>
-            </div>
+            <JsonEditor
+              schema={schema}
+              onUpdate={setSchema}
+              isEditing={isEditingJson}
+              onToggleEdit={toggleJsonEditMode}
+            />
           )}
         </CardContent>
       </Card>
