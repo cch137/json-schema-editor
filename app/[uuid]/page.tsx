@@ -1459,13 +1459,13 @@ export default function SchemaDetailPage() {
     }
   };
 
-  const saveSchema = async () => {
+  const saveSchema = async (argSchema?: typeof schema) => {
     if (!schemaId || !schemaDetail) return;
 
     setSaving(true);
     try {
       await updateSchema(schemaId, {
-        json: schema,
+        json: argSchema || schema,
         metadata: schemaDetail.metadata,
       });
       toast({
@@ -1737,7 +1737,10 @@ export default function SchemaDetailPage() {
           ) : (
             <JsonEditor
               schema={schema}
-              onUpdate={setSchema}
+              onUpdate={(s: typeof schema) => {
+                setSchema(s);
+                saveSchema(s);
+              }}
               isEditing={isEditingJson}
               onToggleEdit={toggleJsonEditMode}
             />
