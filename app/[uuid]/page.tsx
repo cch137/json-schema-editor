@@ -1688,7 +1688,7 @@ export default function SchemaDetailPage() {
           </AlertDialog>
           <Button
             size="sm"
-            onClick={saveSchema}
+            onClick={() => saveSchema()}
             disabled={saving || !hasUnsavedChanges}
             className="h-7 text-xs px-2"
           >
@@ -1739,7 +1739,7 @@ export default function SchemaDetailPage() {
               schema={schema}
               onUpdate={(s: typeof schema) => {
                 setSchema(s);
-                saveSchema(s);
+                if (!hasUnsavedChanges) saveSchema(s);
               }}
               isEditing={isEditingJson}
               onToggleEdit={toggleJsonEditMode}
