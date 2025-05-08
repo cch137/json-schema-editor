@@ -1014,7 +1014,7 @@ const SchemaEditor = React.forwardRef<
   }
 >(({ schema, onUpdate, ...props }, ref) => {
   // Ensure schema is an object
-  const safeSchema = schema || {};
+  const safeSchema = useMemo(() => schema || {}, [schema]);
 
   // Add a new root property
   const handleAddProperty = useCallback(() => {
