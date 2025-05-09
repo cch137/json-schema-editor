@@ -15,6 +15,7 @@ import {
   createSchema,
   deleteSchema,
   renameSchema,
+  UnmountedSymbol,
 } from "@/lib/api";
 import type { SchemaListItem } from "@/lib/types";
 import {
@@ -52,13 +53,14 @@ export default function SchemaListPage() {
   );
   const [newName, setNewName] = useState("");
 
-  const fetchSchemas = useCallback(async () => {
+  const fetchSchemas = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchSchemaList();
+      const data = await fetchSchemaList(signal);
       setSchemas(data);
     } catch (err) {
+      if (err === UnmountedSymbol) return;
       setError(err instanceof Error ? err.message : "Failed to fetch schemas");
       toast({
         title: "Error",
@@ -71,8 +73,14 @@ export default function SchemaListPage() {
     }
   }, []);
 
-  useEffect(() => {
+  const onClickFetchSchemas = useCallback(() => {
     fetchSchemas();
+  }, [fetchSchemas]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchSchemas(controller.signal);
+    return () => controller.abort(UnmountedSymbol);
   }, [fetchSchemas]);
 
   const handleCreateSchema = useCallback(async () => {
@@ -189,7 +197,7 @@ export default function SchemaListPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={fetchSchemas}
+            onClick={onClickFetchSchemas}
             disabled={loading}
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />

@@ -4,6 +4,8 @@ import {
   ApiResponseSchema,
 } from "./types";
 
+export const UnmountedSymbol = Symbol();
+
 const API_BASE_URL = "https://jet.cch137.link/agents/schemas";
 
 const apiInit = {
@@ -14,11 +16,12 @@ const apiInit = {
   },
 } as const;
 
-export async function fetchSchemaList() {
+export async function fetchSchemaList(signal?: AbortSignal) {
   try {
     const response = await fetch(`${API_BASE_URL}/list`, {
       method: "GET",
       ...apiInit,
+      signal,
     });
 
     const data = await response.json();
