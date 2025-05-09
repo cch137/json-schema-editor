@@ -1475,33 +1475,36 @@ export default function SchemaDetailPage() {
     }
   };
 
-  const saveSchema = async (argSchema?: typeof schema) => {
-    if (!schemaId || !schemaDetail) return;
+  const saveSchema = useCallback(
+    async (argSchema?: typeof schema) => {
+      if (!schemaId || !schemaDetail) return;
 
-    setSaving(true);
-    try {
-      const detail = await updateSchema(schemaId, {
-        json: argSchema || schema,
-        metadata: schemaDetail.metadata,
-      });
-      toast({
-        title: "Success",
-        description: "Schema saved successfully.",
-      });
-      setSchemaDetail(detail);
-      setSchema(detail.json);
-      setLastSavedSchema(JSON.parse(JSON.stringify(detail.json)));
-    } catch (error) {
-      console.error("Error saving schema:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save schema.",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
+      setSaving(true);
+      try {
+        const detail = await updateSchema(schemaId, {
+          json: argSchema || schema,
+          metadata: schemaDetail.metadata,
+        });
+        toast({
+          title: "Success",
+          description: "Schema saved successfully.",
+        });
+        setSchemaDetail(detail);
+        setSchema(detail.json);
+        setLastSavedSchema(JSON.parse(JSON.stringify(detail.json)));
+      } catch (error) {
+        console.error("Error saving schema:", error);
+        toast({
+          title: "Error",
+          description: "Failed to save schema.",
+          variant: "destructive",
+        });
+      } finally {
+        setSaving(false);
+      }
+    },
+    [schema, schemaDetail, schemaId]
+  );
 
   const downloadSchema = () => {
     const jsonString = JSON.stringify(schema, null, 2);
