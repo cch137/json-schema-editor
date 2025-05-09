@@ -29,6 +29,7 @@ import {
   updateSchema,
   deleteSchema as apiDeleteSchema,
   renameSchema,
+  UnmountedSymbol,
 } from "@/lib/api";
 import type { SchemaDetail } from "@/lib/types";
 import {
@@ -184,9 +185,9 @@ const TYPE_ICONS: Record<PropertyType, React.ReactNode> = {
   string: <span className="text-blue-500 text-xs font-mono">abc</span>,
   number: <span className="text-green-500 text-xs font-mono">123</span>,
   integer: <span className="text-emerald-500 text-xs font-mono">int</span>,
-  boolean: <span className="text-purple-500 text-xs font-mono">T/F</span>,
+  boolean: <span className="text-purple-500 text-xs font-mono">bool</span>,
   object: <span className="text-orange-500 text-xs font-mono">{"{}"}</span>,
-  array: <span className="text-pink-500 text-xs font-mono">[ ]</span>,
+  array: <span className="text-pink-500 text-xs font-mono">[]</span>,
   null: <span className="text-gray-500 text-xs font-mono">null</span>,
 };
 
@@ -320,7 +321,7 @@ const PropertyEditor: React.FC<PropertyEditorProps> = ({
   return (
     <div
       className={cn(
-        "border rounded-md relative mb-2 transition-all duration-200 group pl-2",
+        "border rounded-md relative mb-2 transition-all duration-200 pl-2",
         level > 0 && "ml-3",
         isRequired
           ? "border-blue-300 dark:border-blue-800"
@@ -353,43 +354,6 @@ const PropertyEditor: React.FC<PropertyEditorProps> = ({
         <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800">
           {TYPE_ICONS[node.type]}
         </div>
-
-        {/* Property name or title */}
-        <div className="flex-grow min-w-0">
-          {propKey !== null && onRename ? (
-            <Input
-              id={`${propertyId}-name`}
-              value={tempKey}
-              onChange={handleKeyChange}
-              onKeyDown={handleKeyDown}
-              onBlur={handleBlur}
-              className="h-6 text-xs px-2 py-0 border-dashed focus:border-solid"
-              ref={inputRef}
-            />
-          ) : (
-            <div className="text-xs font-medium truncate">
-              {node.title || (propKey === null ? "Array Items" : propKey)}
-            </div>
-          )}
-        </div>
-
-        {/* Required checkbox - 移到类型选择前面 */}
-        {propKey !== null && parentSchema && onToggleRequired && (
-          <div className="flex items-center gap-1">
-            <Checkbox
-              id={`${propertyId}-required`}
-              checked={isRequired}
-              onCheckedChange={handleRequiredChange}
-              className="h-4 w-4"
-            />
-            <Label
-              htmlFor={`${propertyId}-required`}
-              className="text-xs opacity-75 cursor-pointer"
-            >
-              Required
-            </Label>
-          </div>
-        )}
 
         {/* Type selector */}
         <Select
@@ -456,6 +420,43 @@ const PropertyEditor: React.FC<PropertyEditorProps> = ({
           </SelectContent>
         </Select>
 
+        {/* Required checkbox - 移到类型选择前面 */}
+        {propKey !== null && parentSchema && onToggleRequired && (
+          <div className="flex items-center gap-1">
+            <Checkbox
+              id={`${propertyId}-required`}
+              checked={isRequired}
+              onCheckedChange={handleRequiredChange}
+              className="h-4 w-4"
+            />
+            <Label
+              htmlFor={`${propertyId}-required`}
+              className="text-[10px] opacity-75 cursor-pointer"
+            >
+              Required
+            </Label>
+          </div>
+        )}
+
+        {/* Property name or title */}
+        <div className="flex-grow min-w-0">
+          {propKey !== null && onRename ? (
+            <Input
+              id={`${propertyId}-name`}
+              value={tempKey}
+              onChange={handleKeyChange}
+              onKeyDown={handleKeyDown}
+              onBlur={handleBlur}
+              className="h-6 text-xs px-2 py-0 border-dashed focus:border-solid"
+              ref={inputRef}
+            />
+          ) : (
+            <div className="text-xs font-medium truncate">
+              {node.title || (propKey === null ? "Array Items" : propKey)}
+            </div>
+          )}
+        </div>
+
         {/* Action buttons */}
         <div className="flex-shrink-0 flex gap-1">
           {/* Remove button */}
@@ -463,7 +464,7 @@ const PropertyEditor: React.FC<PropertyEditorProps> = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="h-6 w-6 text-red-500 transition-opacity"
               onClick={onRemove}
             >
               <Trash2 className="h-3 w-3" />
@@ -1341,7 +1342,6 @@ export default function SchemaDetailPage() {
   const [isEditingJson, setIsEditingJson] = useState(false);
 
   useEffect(() => {
-    const hookUnmounted = Symbol();
     const controller = new AbortController();
 
     const fetchData = async () => {
@@ -1357,7 +1357,7 @@ export default function SchemaDetailPage() {
           setNewSchemaName(detail.name);
           setLoading(false);
         } catch (err) {
-          if (err === hookUnmounted) return;
+          if (err === UnmountedSymbol) return;
           setLoading(false);
           setError(
             err instanceof Error ? err.message : "Failed to fetch schema"
@@ -1374,7 +1374,7 @@ export default function SchemaDetailPage() {
 
     fetchData();
 
-    return () => controller.abort(hookUnmounted);
+    return () => controller.abort(UnmountedSymbol);
   }, [schemaId]);
 
   // Check for unsaved changes using JSON.stringify comparison
@@ -1480,7 +1480,7 @@ export default function SchemaDetailPage() {
 
     setSaving(true);
     try {
-      await updateSchema(schemaId, {
+      const detail = await updateSchema(schemaId, {
         json: argSchema || schema,
         metadata: schemaDetail.metadata,
       });
@@ -1488,7 +1488,6 @@ export default function SchemaDetailPage() {
         title: "Success",
         description: "Schema saved successfully.",
       });
-      const detail = await fetchSchemaDetail(schemaId);
       setSchemaDetail(detail);
       setSchema(detail.json);
       setLastSavedSchema(JSON.parse(JSON.stringify(detail.json)));
@@ -1556,6 +1555,18 @@ export default function SchemaDetailPage() {
     },
     [isEditingJson]
   );
+
+  // ctrl + S save schema when has unsaved changes
+  useEffect(() => {
+    const handleSaveSchema = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key.toUpperCase() === "S") {
+        if (hasUnsavedChanges) saveSchema();
+        e.preventDefault();
+      }
+    };
+    document.addEventListener("keydown", handleSaveSchema);
+    return () => document.removeEventListener("keydown", handleSaveSchema);
+  }, [hasUnsavedChanges, saveSchema]);
 
   if (loading) {
     return (
