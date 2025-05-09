@@ -381,7 +381,6 @@ const PropertyEditor: React.FC<PropertyEditorProps> = ({
             // 对于 object 类型，确保有 properties
             if (newType === "object" && !currentNode.properties) {
               updates.properties = {};
-              updates.additionalProperties = false;
             }
 
             // 对于 array 类型，删除 items 以便用户重新选择
