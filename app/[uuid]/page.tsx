@@ -289,6 +289,7 @@ const PropertyEditor: React.FC<PropertyEditorProps> = ({
           ...properties,
           [newPropName]: { type: "string" },
         },
+        required: [...(node.required || []), newPropName],
       });
       setIsExpanded(true);
     }
@@ -1030,7 +1031,10 @@ const SchemaEditor = React.forwardRef<
       newPropName = `property${++i}`;
     }
     newSchema.properties[newPropName] = { type: "string" };
-    onUpdate(newSchema); // Pass the new object to ensure state update
+    onUpdate({
+      ...newSchema,
+      required: [...(newSchema.required || []), newPropName],
+    }); // Pass the new object to ensure state update
   }, [safeSchema, onUpdate]);
 
   // Remove a root property
