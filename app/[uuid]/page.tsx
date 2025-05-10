@@ -324,9 +324,7 @@ const PropertyEditor: React.FC<PropertyEditorProps> = ({
       className={cn(
         "border rounded-md relative mb-2 transition-all duration-200 pl-2",
         level > 0 && "ml-3",
-        isRequired
-          ? "border-blue-300 dark:border-blue-800"
-          : "border-neutral-200 dark:border-neutral-800",
+        "border-neutral-200 dark:border-neutral-800",
         hasNestedContent && isExpanded
           ? "bg-neutral-50 dark:bg-neutral-900"
           : "bg-white dark:bg-neutral-950",
